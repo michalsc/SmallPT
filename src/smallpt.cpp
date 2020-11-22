@@ -21,7 +21,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef __m68k__
 #include <math-68881.h>
+#else
+#include <math.h>
+#endif
+
+#include "smallpt.h"
 
 #define M_PI 3.14159265358979323846
 #define M_1_PI 0.31830988618379067154
@@ -217,45 +223,20 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi)
 }
 
 extern ULONG *workBuffer;
-static const int TILE_SIZE = 32;
 static const int render_width = TILE_SIZE * 10;
 static const int render_height = TILE_SIZE * 8;
 static const int samps = 10;
 static const int explicit_mode = 1;
 int running = TRUE;
-struct BitMap *outputBMap = NULL;
-struct Window *displayWin = NULL;
-struct RastPort *outBMRastPort = NULL;
-char tmpbuf[512];
-struct timeval start_time;
 
-int GetWidth()
+unsigned int GetWidth()
 {
     return render_width;
 }
 
-int GetHeight()
+unsigned int GetHeight()
 {
     return render_height;
-}
-
-void RedrawTile(int tile_x, int tile_y, int ylines=TILE_SIZE)
-{
-    struct timeval now;
-    WritePixelArray(workBuffer, tile_x * TILE_SIZE, tile_y * TILE_SIZE, render_width * sizeof(ULONG), outBMRastPort,
-                                tile_x * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE, ylines, RECTFMT_ARGB);
-
-    BltBitMapRastPort (outputBMap, tile_x * TILE_SIZE, tile_y * TILE_SIZE, displayWin->RPort,
-                                displayWin->BorderLeft + tile_x * TILE_SIZE, displayWin->BorderTop + tile_y * TILE_SIZE,
-                                            TILE_SIZE, ylines, 0xC0);
-    
-    GetSysTime(&now);
-    SubTime(&now, &start_time);
-    snprintf(tmpbuf, 500, "SmallPT renderer: %ld:%02ld:%02ld (working...)", 
-                                    now.tv_secs / 3600,
-                                    (now.tv_secs / 60) % 60,
-                                    now.tv_secs % 60);
-    SetWindowTitles(displayWin, tmpbuf, NULL);
 }
 
 void RenderTile(int tile_x, int tile_y)
@@ -298,112 +279,27 @@ void RenderTile(int tile_x, int tile_y)
         }
 
         RedrawTile(tile_x, tile_y, _y - tile_y * 32 + 1);
-
-        struct IntuiMessage *msg;
-        while ((msg = (struct IntuiMessage *)GetMsg(displayWin->UserPort)))
-        {
-            switch(msg->Class)
-            {
-                case IDCMP_CLOSEWINDOW:
-                    running = FALSE;
-                    return;
-
-                case IDCMP_REFRESHWINDOW:
-                    BeginRefresh(msg->IDCMPWindow);
-                    BltBitMapRastPort (outputBMap, 0, 0,
-                        msg->IDCMPWindow->RPort, msg->IDCMPWindow->BorderLeft, msg->IDCMPWindow->BorderTop,
-                        render_width, render_height, 0xC0);
-                    EndRefresh(msg->IDCMPWindow, TRUE);
-                    break;
-            }
-            ReplyMsg((struct Message *)msg);
-        }
     }
 }
 
-void SmallPT(struct Window *myWindow)
+void SmallPTLoop()
 {
-    struct timeval now;
+    if (explicit_mode)
+        spheres[0] = Sphere(5, Vec(50,81.6-16.5,81.6),Vec(4,4,4)*20,  Vec(), DIFF);
+    else
+        spheres[0] = Sphere(600, Vec(50,681.6-.27,81.6),Vec(12,12,12),  Vec(), DIFF);
 
-    displayWin = myWindow;
-    running = TRUE;
-
-    outputBMap = AllocBitMap(
-                    render_width,
-                    render_height,
-                    GetBitMapAttr(myWindow->WScreen->RastPort.BitMap, BMA_DEPTH),
-                    BMF_DISPLAYABLE, myWindow->WScreen->RastPort.BitMap);
-
-    if (outputBMap != NULL)
+    for (unsigned tile_y = 0; tile_y < (render_height / TILE_SIZE); tile_y++)
     {
-        outBMRastPort = (struct RastPort *)AllocMem(sizeof(struct RastPort), MEMF_ANY|MEMF_CLEAR);
-        if (!outBMRastPort)
+        for (unsigned tile_x = 0; tile_x < (render_width / TILE_SIZE); tile_x++)
         {
-            FreeBitMap(outputBMap);
-            return;
-        }
-
-        InitRastPort(outBMRastPort);
-        outBMRastPort->BitMap = outputBMap;
-
-        for (unsigned i=0; i < render_width*render_height; i++)
-            workBuffer[i] = 0;
-
-        GetSysTime(&start_time);
-
-        if (explicit_mode)
-            spheres[0] = Sphere(5, Vec(50,81.6-16.5,81.6),Vec(4,4,4)*20,  Vec(), DIFF);
-        else
-            spheres[0] = Sphere(600, Vec(50,681.6-.27,81.6),Vec(12,12,12),  Vec(), DIFF);
-
-        for (unsigned tile_y = 0; tile_y < (render_height / TILE_SIZE); tile_y++)
-        {
-            for (unsigned tile_x = 0; tile_x < (render_width / TILE_SIZE); tile_x++)
-            {
-                RenderTile(tile_x, tile_y);
-                
-                if (running == FALSE)
-                    break;
-            }
+            RenderTile(tile_x, tile_y);
+            
             if (running == FALSE)
                 break;
         }
-        
-        GetSysTime(&now);
-        SubTime(&now, &start_time);
-        snprintf(tmpbuf, 500, "SmallPT renderer: Total time %ld:%02ld:%02ld", 
-                                        now.tv_secs / 3600,
-                                        (now.tv_secs / 60) % 60,
-                                        now.tv_secs % 60);
-        SetWindowTitles(displayWin, tmpbuf, NULL);
-        
-        running = TRUE;
-
-        do {
-            struct IntuiMessage *msg;
-
-            WaitPort(myWindow->UserPort);
-            while ((msg = (struct IntuiMessage *)GetMsg(myWindow->UserPort)) != 0)
-            {
-                if (msg->Class == IDCMP_CLOSEWINDOW)
-                {
-                    running = FALSE;
-                }
-                else if (msg->Class == IDCMP_REFRESHWINDOW)
-                {
-                    BeginRefresh(msg->IDCMPWindow);
-                    BltBitMapRastPort (outputBMap, 0, 0,
-                        msg->IDCMPWindow->RPort, msg->IDCMPWindow->BorderLeft, msg->IDCMPWindow->BorderTop,
-                        render_width, render_height, 0xC0);
-                    EndRefresh(msg->IDCMPWindow, TRUE);
-                }
-
-                ReplyMsg((struct Message *)msg);
-            }
-
-        } while(running == TRUE);    
-
-        FreeMem(outBMRastPort, sizeof(struct RastPort));
-        FreeBitMap(outputBMap);
+        if (running == FALSE)
+            break;
     }
 }
+
