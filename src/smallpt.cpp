@@ -294,7 +294,7 @@ void RenderTile(int tile_x, int tile_y)
             }
 
             workBuffer[render_pos++] = ((toInt(c.x) & 0xff)) |
-                    ((toInt(c.y) & 0xff) << 8) | ((toInt(c.z) & 0xff) << 16);
+                    ((toInt(c.y) & 0xff) << 8) | ((toInt(c.z) & 0xff) << 16) | 0xff000000;
         }
 
         RedrawTile(tile_x, tile_y, _y - tile_y * 32 + 1);
