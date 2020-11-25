@@ -171,7 +171,7 @@ void SmallPT(struct Window *myWindow)
                     GetWidth(),
                     GetHeight(),
                     GetBitMapAttr(myWindow->WScreen->RastPort.BitMap, BMA_DEPTH),
-                    BMF_DISPLAYABLE, myWindow->WScreen->RastPort.BitMap);
+                    BMF_MINPLANES | BMF_CLEAR, myWindow->WScreen->RastPort.BitMap);
 
     if (outputBMap != NULL)
     {

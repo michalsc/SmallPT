@@ -1,3 +1,4 @@
+#if 0
 #define L 
 #include <exec/types.h>
 #include <exec/execbase.h>
@@ -17,6 +18,7 @@
 #include <proto/timer.h>
 #include <cybergraphics/cybergraphics.h>
 #include <utility/tagitem.h>
+#endif
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -29,8 +31,13 @@
 
 #include "smallpt.h"
 
+#ifndef M_PI
 #define M_PI 3.14159265358979323846
+#endif
+
+#ifndef M_1_PI
 #define M_1_PI 0.31830988618379067154
+#endif
 
 struct Vec {        // Usage: time ./smallpt 5000 && xv image.ppm
     double x;
@@ -83,6 +90,7 @@ struct Sphere
     }
 };
 
+#if 1
 Sphere spheres[] = {//Scene: radius, position, emission, color, material
    Sphere(600, Vec(50,681.6-.27,81.6),Vec(12,12,12),  Vec(), DIFF), //Lite
    Sphere(1e5, Vec( 1e5+1,40.8,81.6), Vec(),Vec(.75,.25,.25),DIFF),//Left
@@ -97,6 +105,57 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
    Sphere(8.,Vec(50,8.,108),       Vec(),Vec(1,0.6,0.7)*.999, REFR),//Glas
    Sphere(6.5, Vec(53,6.5,48),       Vec(),Vec(0.3,.4,.4)*.999, SPEC),//Mirr
  };
+#elif 1
+//double R=60;
+double R=120;     // radius
+double T=30*M_PI/180.;
+double D=R/cos(T);     //distance
+// double D=60;     //distance
+// double R=D*sqrt(2);
+double Z=62;
+Vec C=Vec(0.275, 0.612, 0.949);
+Sphere spheres[] = {//Scene: radius, position, emission, color, material
+
+  Sphere(R, Vec(50,28,Z)+Vec( cos(T),sin(T),0)*D,    C*6e-2,Vec(1,1,1)*.996, SPEC), //red
+  Sphere(R, Vec(50,28,Z)+Vec(-cos(T),sin(T),0)*D,    C*6e-2,Vec(1,1,1)*.996, SPEC), //grn
+  Sphere(R, Vec(50,28,Z)+Vec(0,-1,0)*D,              C*6e-2,Vec(1,1,1)*.996, SPEC), //blue
+  Sphere(R, Vec(50,28,Z)+Vec(0,0,-1)*R*2*sqrt(2./3.),C*0e-2,Vec(1,1,1)*.996, SPEC), //back
+//  Sphere(1e5, Vec(50,28,Z)+Vec(0,0,1e5+170),   Vec(1,1,1)*0,Vec(1,1,1)*.996, SPEC), //front
+//  Sphere(2*R*2*sqrt(2./3.)-R*2*sqrt(2./3.)/3., Vec(50,28,Z)+Vec(0,0,-R*2*sqrt(2./3.)/3.),   Vec(1,1,1)*0,Vec(1,1,1)*.3333, SPEC), //front
+  Sphere(2*2*R*2*sqrt(2./3.)-R*2*sqrt(2./3.)/3., Vec(50,28,Z)+Vec(0,0,-R*2*sqrt(2./3.)/3.),   Vec(1,1,1)*0,Vec(1,1,1)*.5, SPEC), //front
+};
+#else
+Vec tc(0.0588, 0.361, 0.0941);
+Vec sc = Vec(1,1,1)*.7;
+Sphere spheres[] = {//Scene: radius, position, emission, color, material
+  // center 50 40.8 62
+  // floor 0
+  // back  0
+//  Sphere(1e5, Vec(50, 1e5+100, 0),  Vec(1,1,1)*1,Vec(),DIFF), //lite
+//  Sphere(1e5, Vec(50, -1e5, 0),  Vec(),Vec(.3,.3,.1),DIFF), //grnd
+//  Sphere(1e5, Vec(50, 1e5+100, 0),  Vec(0.761, 0.875, 1.00)*1.3,Vec(),DIFF),
+//  //lite
+  Sphere(1e5, Vec(50, 1e5+130, 0),  Vec(1,1,1)*1.3,Vec(),DIFF), //lite
+  Sphere(1e2, Vec(50, -1e2+2, 47),  Vec(),Vec(1,1,1)*.7,DIFF), //grnd
+
+  Sphere(1e4, Vec(50, -30, 300)+Vec(-sin(50*M_PI/180),0,cos(50*M_PI/180))*1e4, Vec(), Vec(1,1,1)*.99,SPEC),// mirr L
+  Sphere(1e4, Vec(50, -30, 300)+Vec(sin(50*M_PI/180),0,cos(50*M_PI/180))*1e4,  Vec(), Vec(1,1,1)*.99,SPEC),// mirr R
+  Sphere(1e4, Vec(50, -30, -50)+Vec(-sin(30*M_PI/180),0,-cos(30*M_PI/180))*1e4,Vec(), Vec(1,1,1)*.99,SPEC),// mirr FL
+  Sphere(1e4, Vec(50, -30, -50)+Vec(sin(30*M_PI/180),0,-cos(30*M_PI/180))*1e4, Vec(), Vec(1,1,1)*.99,SPEC),// mirr
+
+
+  Sphere(4, Vec(50,6*.6,47),   Vec(),Vec(.13,.066,.033), DIFF),//"tree"
+  Sphere(16,Vec(50,6*2+16*.6,47),   Vec(), tc,  DIFF),//"tree"
+  Sphere(11,Vec(50,6*2+16*.6*2+11*.6,47),   Vec(), tc,  DIFF),//"tree"
+  Sphere(7, Vec(50,6*2+16*.6*2+11*.6*2+7*.6,47),   Vec(), tc,  DIFF),//"tree"
+
+  Sphere(15.5,Vec(50,1.8+6*2+16*.6,47),   Vec(), sc,  DIFF),//"tree"
+  Sphere(10.5,Vec(50,1.8+6*2+16*.6*2+11*.6,47),   Vec(), sc,  DIFF),//"tree"
+  Sphere(6.5, Vec(50,1.8+6*2+16*.6*2+11*.6*2+7*.6,47),   Vec(), sc,  DIFF),//"tree"
+};
+
+
+#endif
 
 const int numSpheres = sizeof(spheres)/sizeof(Sphere);
 
@@ -222,12 +281,12 @@ Vec radiance(const Ray &r, int depth, unsigned short *Xi)
         radiance(reflRay,depth,Xi)*Re+radiance(Ray(x,tdir),depth,Xi)*Tr);
 }
 
-extern ULONG *workBuffer;
+extern uint32_t *workBuffer;
 static const int render_width = TILE_SIZE * 10;
 static const int render_height = TILE_SIZE * 8;
-static const int samps = 10;
+static const int samps = 1;
 static const int explicit_mode = 1;
-int running = TRUE;
+int running = 1;
 
 unsigned int GetWidth()
 {
@@ -274,8 +333,16 @@ void RenderTile(int tile_x, int tile_y)
                 }
             }
 
-            workBuffer[render_pos++] = ((toInt(c.x) & 0xff)) |
-                    ((toInt(c.y) & 0xff) << 8) | ((toInt(c.z) & 0xff) << 16) | 0xff000000;
+#if 0
+            //int g = toInt(c.x * 0.114) + toInt(c.y * 0.587) + toInt(c.z * 0.2989);
+            int g = toInt(c.x)*29 + toInt(c.y)*150 + toInt(c.z)*77;
+            g >>= 8;
+            if (g > 255) g = 255;
+            workBuffer[render_pos++] = g | (g << 8) | (g << 16) | 0xff000000;
+#else
+            workBuffer[render_pos++] = ((toInt(c.x) & 0xf0)) |
+                    ((toInt(c.y) & 0xf0) << 8) | ((toInt(c.z) & 0xf0) << 16) | 0xff000000;
+#endif
         }
 
         RedrawTile(tile_x, tile_y, _y - tile_y * 32 + 1);
@@ -284,21 +351,22 @@ void RenderTile(int tile_x, int tile_y)
 
 void SmallPTLoop()
 {
+#if 1
     if (explicit_mode)
         spheres[0] = Sphere(5, Vec(50,81.6-16.5,81.6),Vec(4,4,4)*20,  Vec(), DIFF);
     else
         spheres[0] = Sphere(600, Vec(50,681.6-.27,81.6),Vec(12,12,12),  Vec(), DIFF);
-
+#endif
     for (unsigned tile_y = 0; tile_y < (render_height / TILE_SIZE); tile_y++)
     {
         for (unsigned tile_x = 0; tile_x < (render_width / TILE_SIZE); tile_x++)
         {
             RenderTile(tile_x, tile_y);
             
-            if (running == FALSE)
+            if (running == 0)
                 break;
         }
-        if (running == FALSE)
+        if (running == 0)
             break;
     }
 }

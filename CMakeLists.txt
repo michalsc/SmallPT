@@ -20,9 +20,9 @@ if (${TARGET} IN_LIST SUPPORTED_TARGETS)
     message("-- Selected target machine: ${TARGET}")
     if(${TARGET} STREQUAL "AmigaOS")
         list(APPEND TARGET_FILES src/main_amiga.cpp)
+        add_compile_options(-m68020 -m68881)
     elseif(${TARGET} STREQUAL "Qt")
         find_package(Qt5 COMPONENTS Widgets LinguistTools REQUIRED)
-        target_link_libraries(SmallPT Qt5::Widgets)
         list(APPEND TARGET_FILES src/main_qt.cpp)
     endif()
 else()
@@ -31,11 +31,15 @@ endif()
 
 install(FILES ${CMAKE_BINARY_DIR}/SmallPT DESTINATION .)
 
-add_compile_options(-m68020 -m68881 -fomit-frame-pointer -fno-exceptions -pedantic -pedantic-errors -Wall -Wextra -Werror)
+add_compile_options(-fomit-frame-pointer -fno-exceptions -pedantic -pedantic-errors -Wall -Wextra -Werror -Os)
 
 add_executable(SmallPT
     ${TARGET_FILES}
     ${BASE_FILES}
 )
+
+if (${TARGET} STREQUAL "Qt")
+        target_link_libraries(SmallPT Qt5::Widgets)
+endif()    
 
 target_compile_definitions(SmallPT PRIVATE VERSION_STRING="${VERSTRING}")
